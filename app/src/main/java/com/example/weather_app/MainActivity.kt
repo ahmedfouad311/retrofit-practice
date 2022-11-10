@@ -3,20 +3,17 @@ package com.example.weather_app
 import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
 import android.util.Log
-import android.view.View
 import android.widget.TextView
-import kotlinx.android.synthetic.main.activity_main.*
+import com.example.weather_app.models.BaseModel
 import retrofit2.Call
 import retrofit2.Callback
 import retrofit2.Response
 import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
-import kotlin.math.log
 
 
 class MainActivity : AppCompatActivity() {
     private val apiKey: String = "238665c84ba9527bfe464eeb30db5dfe"
-    val model: WeatherModel = WeatherModel()
     lateinit var tv: TextView
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -27,38 +24,40 @@ class MainActivity : AppCompatActivity() {
         getWeather()
     }
 
-    fun getWeather(): Unit{
+    private fun getWeather(){
         var retrofit: Retrofit = Retrofit.Builder()
             .baseUrl("https://api.openweathermap.org/data/2.5/")
             .addConverterFactory(GsonConverterFactory.create())
             .build()
 
         var api: WeatherApi = retrofit.create(WeatherApi::class.java)
-        val response: Call<WeatherModel> = api.getWeather("Egypt", apiKey)
+        val response: Call<BaseModel> = api.getWeather("Egypt", apiKey)
 
-        response.enqueue(object : Callback<WeatherModel>{
-            override fun onResponse(call: Call<WeatherModel>, response: Response<WeatherModel>) {
+        response.enqueue(object : Callback<BaseModel>{
+            override fun onResponse(call: Call<BaseModel>, response: Response<BaseModel>) {
                 if(response.code() == 404){
-//                    tv.text = "Invalid City"
-                    Log.e("Code 404", "Invalid City")
+                    runOnUiThread {
+                        tv.text = "Invalid City"
+                    }
                 } else if(!(response.isSuccessful)){
-//                    tv.text = response.code().toString()
-                    Log.e("unSuccessful response", response.code().toString())
+                    runOnUiThread {
+                        tv.text = "${response.code()}"
+                    }
                 }
-                var retrievedData: WeatherModel? = response.body()
-                var apiTemp = retrievedData?.temp
-                var fixedTemp = apiTemp?.toInt()
-
-                Log.e("Temp", fixedTemp.toString() + "C")
-
+                var retrievedData: BaseModel? = response.body()
+                var apiTemp = retrievedData?.main?.temp?.toInt()
+                var fixedTemp = apiTemp
                 runOnUiThread {
-                    tv.text = "$fixedTemp C"
+                    tv.text = "$fixedTemp"
                 }
             }
 
-            override fun onFailure(call: Call<WeatherModel>, t: Throwable) {
-                tv.text = t.message
+            override fun onFailure(call: Call<BaseModel>, t: Throwable) {
+                runOnUiThread {
+                    tv.text = t.message
+                }
             }
+
 
         })
     }
