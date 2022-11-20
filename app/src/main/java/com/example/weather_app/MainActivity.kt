@@ -4,7 +4,12 @@ import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
 import android.util.Log
 import android.widget.TextView
+import android.widget.Toast
+import androidx.activity.viewModels
 import com.example.weather_app.models.BaseModel
+import com.example.weather_app.network.AppNetwork
+import com.example.weather_app.network.AppNetwork.Companion.retrofit
+import com.example.weather_app.repo.AppRepo
 import retrofit2.Call
 import retrofit2.Callback
 import retrofit2.Response
@@ -13,7 +18,9 @@ import retrofit2.converter.gson.GsonConverterFactory
 
 
 class MainActivity : AppCompatActivity() {
-    private val apiKey: String = "238665c84ba9527bfe464eeb30db5dfe"
+
+    private val viewmodel: MainViewModel by viewModels()
+
     lateinit var tv: TextView
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -21,44 +28,16 @@ class MainActivity : AppCompatActivity() {
         setContentView(R.layout.activity_main)
 
         tv = findViewById(R.id.weatherTv)
-        getWeather()
+
+        viewmodel.getWeather()
+
+        viewmodel.result.observe(this) {
+            tv.text = it.main.temp.toInt().toString()
+        }
+
+        viewmodel.error.observe(this) {
+            Toast.makeText(this, it.localizedMessage, Toast.LENGTH_SHORT).show()
+        }
     }
 
-    private fun getWeather(){
-        var retrofit: Retrofit = Retrofit.Builder()
-            .baseUrl("https://api.openweathermap.org/data/2.5/")
-            .addConverterFactory(GsonConverterFactory.create())
-            .build()
-
-        var api: WeatherApi = retrofit.create(WeatherApi::class.java)
-        val response: Call<BaseModel> = api.getWeather("Egypt", apiKey)
-
-        response.enqueue(object : Callback<BaseModel>{
-            override fun onResponse(call: Call<BaseModel>, response: Response<BaseModel>) {
-                if(response.code() == 404){
-                    runOnUiThread {
-                        tv.text = "Invalid City"
-                    }
-                } else if(!(response.isSuccessful)){
-                    runOnUiThread {
-                        tv.text = "${response.code()}"
-                    }
-                }
-                var retrievedData: BaseModel? = response.body()
-                var apiTemp = retrievedData?.main?.temp?.toInt()
-                var fixedTemp = apiTemp
-                runOnUiThread {
-                    tv.text = "$fixedTemp"
-                }
-            }
-
-            override fun onFailure(call: Call<BaseModel>, t: Throwable) {
-                runOnUiThread {
-                    tv.text = t.message
-                }
-            }
-
-
-        })
-    }
 }
